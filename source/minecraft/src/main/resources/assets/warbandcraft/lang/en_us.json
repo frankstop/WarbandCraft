@@ -1,0 +1,12 @@
+{
+  "block.warbandcraft.terrain": "Warband Terrain",
+  "category.warbandcraft": "Warband Bridge",
+  "key.warbandcraft.camera_mode": "Switch camera mode (drive Warband / follow Warband)",
+  "key.warbandcraft.overlay": "Switch control to Warband (F8 in Warband switches back)",
+  "key.warbandcraft.status": "Debug view (status, hitboxes)",
+  "death.attack.warbandcraft.monster": "%1$s was slain by %2$s",
+  "death.attack.warbandcraft.monster_hit": "%1$s was slain by a Warband soldier",
+  "death.attack.warbandcraft.monster_hit.player": "%1$s was slain by a Warband soldier while fighting %2$s",
+  "death.attack.warbandcraft.status": "%1$s succumbed to a status ailment",
+  "death.attack.warbandcraft.status.player": "%1$s succumbed to a status ailment while fighting %2$s"
+}

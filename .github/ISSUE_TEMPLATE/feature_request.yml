@@ -1,0 +1,10 @@
+name: Feature request
+description: Propose an improvement to host/Minecraft integration.
+body:
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Behavior and use case
+      description: What should happen, in which Warband scene, and how would you test it?
+    validations:
+      required: true

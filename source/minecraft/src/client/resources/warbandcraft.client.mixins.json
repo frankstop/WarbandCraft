@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "package": "dev.wbmc.bridge.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "CameraMixin",
+    "SteveSkinMixin",
+    "FogRendererMixin",
+    "GameRendererMixin",
+    "GuiMixin",
+    "LevelRendererMixin",
+    "MinecraftMixin",
+    "RenderSystemMixin",
+    "RenderTargetMixin",
+    "ScreenMixin",
+    "WindowMixin",
+    "KeyboardHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,22 @@
+name: Bug report
+description: Report a reproducible startup, rendering, movement or gameplay issue.
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Setup
+      description: macOS version, CPU, Warband/Minecraft versions, scene type and window size.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction and observed behavior
+      description: Steps from Play WarbandCraft.command; expected and actual results. Include whether F8/native composition is active.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Relevant log excerpts, F9 diagnostics or a short recording. Remove account data and personal paths; do not upload saves by default.

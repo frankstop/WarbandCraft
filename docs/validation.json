@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-12",
+  "render_dimensions": [
+    1280,
+    720
+  ],
+  "native_vertical_fov_deg": 75,
+  "movement_samples": 546,
+  "max_camera_position_error_m": 0.000818,
+  "max_camera_direction_error": 1.7e-05,
+  "translation_range_m": [
+    12.603408813476562,
+    4.061859607696533,
+    19.169754028320312
+  ],
+  "redstone_lamp_powered": true,
+  "tnt_block_test": {
+    "oak_planks_before": 75,
+    "oak_planks_after": 57
+  },
+  "unverified": [
+    "native-agent combat acceptance",
+    "Elytra acceptance",
+    "all scene types",
+    "native troop collision with Minecraft blocks is not implemented"
+  ]
+}
