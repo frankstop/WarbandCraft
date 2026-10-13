@@ -1,0 +1,18 @@
+{
+  "screenPixel": [
+    1280,
+    500
+  ],
+  "limeBlockRgb": {
+    "shader-off": [
+      52,
+      93,
+      14
+    ],
+    "shader-on": [
+      44,
+      94,
+      0
+    ]
+  }
+}

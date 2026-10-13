@@ -16,3 +16,13 @@ work/
 accounts.json
 launcher_accounts.json
 *.next.dylib
+
+# Local validation products and release archives
+/validation/*
+!/validation/0.2.1/
+!/validation/automated-checks-0.2.1.log
+!/validation/candidate/
+/validation/candidate/*
+!/validation/candidate/play.sh
+!/validation/candidate/bin/
+/releases/*.zip

@@ -1,5 +1,15 @@
 # Installation
 
+## Current 0.2.1 patch
+
+Download **WarbandCraft-0.2.1-patch.zip** from the [0.2.1 release](https://github.com/frankstop/WarbandCraft/releases/tag/v0.2.1). This is a patch for an existing WarbandCraft installation, not a fresh portable installation. Close both bridge games, verify the archive against the supplied SHA256SUMS file, and extract its contents into the existing WarbandCraft project folder while preserving its directory layout.
+
+Double-click **Play WarbandCraft 0.2.1.command**. It prepares the separate **WarbandCraft-Next** Prism instance from the existing **WarbandCraft** instance and reconstructs the separate native module from your owned Native installation. The patch includes its Minecraft mod at `source/minecraft/build/libs/warbandcraft-0.2.1.jar` and native libraries at `validation/candidate/bin/`. Java 21 must be installed at `/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home`; the Next helper currently uses the default Prism instance directory.
+
+Enter a playable scene yourself, then press F8 / Fn+F8. Use windowed 1280 × 720 with native antialiasing off for the validated configuration. Paired native save hooks remain disabled. Read [RELEASE_STATUS.md](../RELEASE_STATUS.md) and [VALIDATION.md](../VALIDATION.md) for actual test results and remaining limits.
+
+The original launcher remains available for the older prototype. The first-installation instructions below describe the original 0.1.0 package; they do not install the isolated 0.2.1 patch.
+
 ## Tested requirements
 
 - Apple Silicon Mac running macOS 26.6.2, with Rosetta and Steam's native macOS Mount & Blade: Warband **1.174** installed. Other macOS releases and Intel Macs have not been tested. No CrossOver or WSE2 is used.

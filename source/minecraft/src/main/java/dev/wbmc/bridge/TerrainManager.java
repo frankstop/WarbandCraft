@@ -37,6 +37,8 @@ import java.util.Properties;
  * the DLL can't answer ray queries, a flat floor at the avatar's feet is used instead.
  */
 public final class TerrainManager {
+    private static volatile boolean diagnosticRays;
+    public static void setDiagnosticRays(boolean paused){diagnosticRays=paused;}
 	private TerrainManager() {
 	}
 
@@ -50,7 +52,7 @@ public final class TerrainManager {
 	/** Columns within this many blocks of a player are kept sampled. */
 	private static final int SAMPLE_RADIUS = 24;
 	/** Rays start this far above the player's feet and reach this far below them. */
-	private static final double RAY_ABOVE = 4.0;
+	private static final double RAY_ABOVE = 0.4;
 	private static final double RAY_BELOW = 40.0;
 	/** Re-sample a column when the player is this much higher/lower than when it was sampled. */
 	private static final double RESAMPLE_DY = 4.0;
@@ -85,20 +87,25 @@ public final class TerrainManager {
 	private static final long RAY_TIMEOUT_MS = 3000;
 
 	/** What was placed in a column: terrain blocks from bottom..top (inclusive). */
-	private record Column(double sampleY, int top, int bottom) {
+	private record Column(double sampleY, int top, int bottom, int upperTop, int upperBottom, long sampledAt) {
 	}
 
 	private static final GameState STATE = new GameState();
+    private record Motion(Vec3 pos,long tick) {}
+    private static final java.util.Map<java.util.UUID,Motion> MOTION=new java.util.HashMap<>();
+    private static double rayLatencyTicks=4;
 	/** Anchors per Warband zone id; each zone gets its own Minecraft region. */
 	private static final java.util.Map<Integer, CoordMap.Mapping> ANCHORS = new java.util.HashMap<>();
 	/** Anchor from before per-zone regions existed; adopted by the first zone seen. */
 	private static CoordMap.Mapping legacyAnchor;
+    private static final java.util.Map<String,Integer> LOCATION_IDS=new java.util.HashMap<>();
 	private static volatile boolean recallRequested;
 	/** Incremented each time players were moved to the avatar (recall or zone change). */
 	private static volatile int recallServed;
 	private static final LongOpenHashSet FLOORED_CHUNKS = new LongOpenHashSet();
 	private static final Long2ObjectOpenHashMap<Column> COLUMNS = new Long2ObjectOpenHashMap<>();
 	private static boolean bridgeWorld;
+    public static volatile int activeEpoch=-1;
 
 	// Ray batch in flight
 	private static int pendingSeq = -1;
@@ -118,6 +125,8 @@ public final class TerrainManager {
 
 	public static void reset() {
 		bridgeWorld = false;
+        activeEpoch=-1;
+        MOTION.clear();
 		FLOORED_CHUNKS.clear();
 		COLUMNS.clear();
 		PENDING_COLUMNS.clear();
@@ -125,6 +134,7 @@ public final class TerrainManager {
 		rayMode = 0;
 		rayFailures = 0;
 		ANCHORS.clear();
+        LOCATION_IDS.clear();
 		legacyAnchor = null;
 		CoordMap.set(null);
 	}
@@ -160,7 +170,7 @@ public final class TerrainManager {
 
 	public static void onServerStarted(MinecraftServer server) {
 		reset();
-		bridgeWorld = BRIDGE_LEVEL_NAME.equals(server.getWorldData().getLevelName());
+		bridgeWorld = server.getWorldData().getLevelName().startsWith(BRIDGE_LEVEL_NAME);
 		if (!bridgeWorld) {
 			return;
 		}
@@ -217,7 +227,9 @@ public final class TerrainManager {
 					for (int y = c.bottom(); y <= c.top(); y++) {
 						clearTerrain(level, ChunkPos.getX(en.getLongKey()), y, ChunkPos.getZ(en.getLongKey()));
 					}
-				}
+                }
+                if(c.upperTop()!=Integer.MIN_VALUE)for(int y=c.upperBottom();y<=c.upperTop();y++)
+                    clearTerrain(level,ChunkPos.getX(en.getLongKey()),y,ChunkPos.getZ(en.getLongKey()));
 			}
 			COLUMNS.clear();
 			pendingSeq = -1;
@@ -225,7 +237,7 @@ public final class TerrainManager {
 			LOG.info("Terrain reset ({})", describeSettings());
 		}
 		collectResults(level, map);
-		if (pendingSeq < 0 && !players.isEmpty()) {
+		if (!diagnosticRays && pendingSeq < 0 && !players.isEmpty()) {
 			submitRays(map, players);
 		}
 		logAttrStats();
@@ -239,19 +251,28 @@ public final class TerrainManager {
 		for (ServerPlayer player : players) {
 			int px = Mth.floor(player.getX());
 			int pz = Mth.floor(player.getZ());
-			double py = player.getY();
+            long tick=player.level().getGameTime();
+            Motion last=MOTION.put(player.getUUID(),new Motion(player.position(),tick));
+            Vec3 velocity=last!=null && tick>last.tick()?player.position().subtract(last.pos()).scale(1.0/(tick-last.tick())):Vec3.ZERO;
+            double lead=Math.min(60,Math.max(10,rayLatencyTicks+10));
+            Vec3 ahead=player.position().add(velocity.scale(lead));
+            // Immediate footing first, then predicted flight/landing, then the surrounding scene.
+            for(int band=0;band<3 && n+RAYS_PER_COLUMN<=BATCH;band++) {
+                int cx=band==1?Mth.floor(ahead.x):px,cz=band==1?Mth.floor(ahead.z):pz;
+                double py=band==1?ahead.y:player.getY();
+                int startRadius=band==2?5:0,endRadius=band==0?4:band==1?8:SAMPLE_RADIUS;
 			// Nearest columns first, so the ground under the player appears immediately.
-			for (int r = 0; r <= SAMPLE_RADIUS && n + RAYS_PER_COLUMN <= BATCH; r++) {
+			for (int r = startRadius; r <= endRadius && n + RAYS_PER_COLUMN <= BATCH; r++) {
 				for (int dx = -r; dx <= r && n + RAYS_PER_COLUMN <= BATCH; dx++) {
 					for (int dz = -r; dz <= r && n + RAYS_PER_COLUMN <= BATCH; dz++) {
 						if (Math.max(Math.abs(dx), Math.abs(dz)) != r || dx * dx + dz * dz > SAMPLE_RADIUS * SAMPLE_RADIUS) {
 							continue;
 						}
-						int x = px + dx;
-						int z = pz + dz;
+						int x = cx + dx;
+						int z = cz + dz;
 						long key = ChunkPos.asLong(x, z);
 						Column c = COLUMNS.get(key);
-						if (c != null && Math.abs(c.sampleY() - py) < RESAMPLE_DY) {
+						if (c != null && Math.abs(c.sampleY() - py) < RESAMPLE_DY && System.currentTimeMillis() - c.sampledAt() < 2000) {
 							continue;
 						}
 						double hy = py + PROBE_HEIGHT;
@@ -263,6 +284,7 @@ public final class TerrainManager {
 					}
 				}
 			}
+            }
 		}
 		if (n == 0) {
 			return;
@@ -288,15 +310,16 @@ public final class TerrainManager {
 
 	/** A horizontal probe hit counts as an obstacle if the surface is steep and stands above the ground. */
 	private static boolean isObstacle(int ray, double groundY, double probeY, CoordMap.Mapping map) {
-		if (HIT_FLAGS[ray] == 0) {
+		if (HIT_FLAGS[ray] != 1) {
 			return false;
 		}
 		WALL_ATTRS.merge(HIT_ATTRS[ray], 1, Integer::sum);
 		if ((HIT_ATTRS[ray] & wallIgnoreMask) != 0) {
 			return false;
 		}
-		double ny = HITS[ray * 6 + 4];
-		return Math.abs(ny) < 0.7 && groundY < probeY - 0.25;
+        // Native cast_ray returns a position, not a surface normal. A horizontal
+        // segment above the sampled floor establishes the obstruction directly.
+        return groundY < probeY - 0.25;
 	}
 
 	private static void logAttrStats() {
@@ -331,6 +354,7 @@ public final class TerrainManager {
 			}
 			return;
 		}
+        rayLatencyTicks=.8*rayLatencyTicks+.2*Math.max(1,(System.currentTimeMillis()-pendingSince)/50.0);
 		int n = PENDING_COLUMNS.size();
 		link.readHits(n * RAYS_PER_COLUMN, HITS, HIT_FLAGS, HIT_ATTRS);
 		if (rayMode == 0) {
@@ -355,16 +379,17 @@ public final class TerrainManager {
 					oldTop = Math.max(oldTop, FLOOR_Y);
 					oldBottom = Math.min(oldBottom, FLOOR_Y);
 				}
-				old = new Column(0, oldTop, oldBottom);
+				old = new Column(0, oldTop, oldBottom, Integer.MIN_VALUE, Integer.MIN_VALUE, 0);
 			}
 			int top = Integer.MIN_VALUE;
 			int bottom = Integer.MIN_VALUE;
+            int upperTop=Integer.MIN_VALUE,upperBottom=Integer.MIN_VALUE;
 			int down = i * RAYS_PER_COLUMN;
 			int high = down + 1;
-			boolean lowHit = HIT_FLAGS[down] != 0;
+			boolean lowHit = HIT_FLAGS[down] == 1;
 			// Ground above the ray start (uphill, a cliff ahead): the low ray started inside the
 			// terrain and found nothing, but the high ray lands on an upward-facing surface.
-			boolean hillHit = !lowHit && HIT_FLAGS[high] != 0 && HITS[high * 6 + 4] > 0.3F;
+			boolean hillHit = !lowHit && HIT_FLAGS[high] == 1;
 			if (lowHit || hillHit) {
 				int g = lowHit ? down : high;
 				GROUND_ATTRS.merge(HIT_ATTRS[g], 1, Integer::sum);
@@ -378,7 +403,7 @@ public final class TerrainManager {
 				double probeY = sampleY + PROBE_HEIGHT;
 				boolean obstacle = isObstacle(down + 2, groundY, probeY, map) || isObstacle(down + 3, groundY, probeY, map);
 				top = topBlock;
-				bottom = hillHit ? Math.min(topBlock, Mth.floor(sampleY) - THICKNESS) : topBlock - THICKNESS;
+				bottom = hillHit ? Math.min(topBlock, Mth.floor(sampleY) - THICKNESS) : topBlock - ((HIT_ATTRS[g] & 1) != 0 ? 0 : THICKNESS);
 				if (obstacle) {
 					// Wall, trunk, rock...: solid from the ground up past head height.
 					top = Math.max(topBlock, Mth.floor(sampleY + WALL_HEIGHT));
@@ -393,15 +418,27 @@ public final class TerrainManager {
 					setTerrain(level, x, y, z, terrain);
 				}
 			}
+
+            if(lowHit && HIT_FLAGS[high]==1) {
+                Vec3 upper=map.toMc(HITS[high*6],HITS[high*6+1],HITS[high*6+2]);
+                Vec3 lower=map.toMc(HITS[down*6],HITS[down*6+1],HITS[down*6+2]);
+                if(upper.y>lower.y+.5 && upper.y>sampleY+.5) {
+                    upperTop=Mth.floor(upper.y-1e-4);upperBottom=upperTop;
+                    int height=Mth.clamp((int)Math.ceil((upper.y-upperTop)*16-1e-3),1,16);
+                    setTerrain(level,x,upperTop,z,terrain.setValue(TerrainBlock.HEIGHT,height));
+                }
+            }
 			if (old != null && old.top() != Integer.MIN_VALUE) {
 				// Remove what the previous sample placed and this one didn't.
 				for (int y = old.bottom(); y <= old.top(); y++) {
-					if (top == Integer.MIN_VALUE || y < bottom || y > top) {
+					if ((top == Integer.MIN_VALUE || y < bottom || y > top) && (upperTop==Integer.MIN_VALUE || y<upperBottom || y>upperTop)) {
 						clearTerrain(level, x, y, z);
 					}
 				}
 			}
-			COLUMNS.put(key, new Column(sampleY, top, bottom));
+            if(old!=null && old.upperTop()!=Integer.MIN_VALUE)for(int y=old.upperBottom();y<=old.upperTop();y++)
+                if((y<bottom||y>top)&&(upperTop==Integer.MIN_VALUE||y<upperBottom||y>upperTop))clearTerrain(level,x,y,z);
+			COLUMNS.put(key, new Column(sampleY, top, bottom, upperTop, upperBottom, System.currentTimeMillis()));
 		}
 		PENDING_COLUMNS.clear();
 		pendingSeq = -1;
@@ -429,7 +466,12 @@ public final class TerrainManager {
 	private static void updateAnchor(MinecraftServer server) {
 		CoordMap.Mapping m = CoordMap.get();
 		double upm = STATE.unitsPerMeter > 0 ? STATE.unitsPerMeter : 100.0;
-		int zone = STATE.stageId;
+		var context = dev.wbmc.bridge.link.WarbandLink.get().context();
+        int zone = STATE.stageId;
+        if(context!=null && context.encounter()!=0) {
+            String key=context.locationId();
+            zone=LOCATION_IDS.computeIfAbsent(key,k->LOCATION_IDS.values().stream().mapToInt(Integer::intValue).min().orElse(0)-1);
+        }
 		if (STATE.has(Protocol.STATE_PLAYER_VALID)) {
 			if (m == null || m.provisional() || m.zone() != zone) {
 				CoordMap.Mapping z = ANCHORS.get(zone);
@@ -446,6 +488,11 @@ public final class TerrainManager {
 				} else {
 					LOG.info("Warband zone {} (region {})", zone, z.region());
 				}
+                // No ray from the previous location may populate this location.
+                pendingSeq = -1;
+                PENDING_COLUMNS.clear();
+                COLUMNS.clear();
+                FLOORED_CHUNKS.clear();
 				ANCHORS.put(zone, z);
 				CoordMap.set(z);
 				saveAnchors(server);
@@ -466,6 +513,7 @@ public final class TerrainManager {
 			// can already be tested. Replaced as soon as the avatar's position is available.
 			CoordMap.set(new CoordMap.Mapping(0, 0, 0, upm, true, true, 0, 0));
 		}
+        if(context!=null && CoordMap.get()!=null && !CoordMap.get().provisional())activeEpoch=context.epoch();
 	}
 
 	private static void teleportToAvatar(ServerLevel level, ServerPlayer player, CoordMap.Mapping map) {
@@ -520,7 +568,9 @@ public final class TerrainManager {
 		Properties props = new Properties();
 		try (Reader r = Files.newBufferedReader(p)) {
 			props.load(r);
-			String zones = props.getProperty("zones");
+			for(String key:props.stringPropertyNames())if(key.startsWith("location."))
+                LOCATION_IDS.put(key.substring(9),Integer.parseInt(props.getProperty(key)));
+            String zones = props.getProperty("zones");
 			if (zones == null && props.getProperty("ax") != null) {
 				legacyAnchor = new CoordMap.Mapping(
 					Double.parseDouble(props.getProperty("ax")), Double.parseDouble(props.getProperty("ay")),
@@ -564,6 +614,7 @@ public final class TerrainManager {
 			props.setProperty(k + "region", Integer.toString(m.region()));
 		}
 		props.setProperty("zones", zones.toString());
+        LOCATION_IDS.forEach((key,id)->props.setProperty("location."+key,Integer.toString(id)));
 		try (Writer w = Files.newBufferedWriter(anchorPath(server))) {
 			props.store(w, "Per Warband zone: the Warband position pinned to Minecraft (0.5 + region * 8192, 100, 0.5)");
 		} catch (IOException e) {

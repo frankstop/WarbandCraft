@@ -141,4 +141,12 @@ public final class WarbandLink {
 			shm.bumpMcHeartbeat();
 		}
 	}
+
+    public synchronized BridgeContext context() { return shm != null && alive() ? shm.context() : null; }
+    public synchronized boolean publishGeometry(int epoch, java.util.List<float[]> boxes) {
+        return shm != null && alive() && shm.publishGeometry(epoch, boxes);
+    }
+    public synchronized void publishLights(int epoch,java.util.List<float[]> lights){
+        if(shm!=null&&alive())shm.publishLights(epoch,lights);
+    }
 }

@@ -38,16 +38,19 @@ public class WarbandBridgeMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		WarbandBridgeEntities.init();
+        WorldMirror.init();
 		ServerLifecycleEvents.SERVER_STARTED.register(TerrainManager::onServerStarted);
 		ServerLifecycleEvents.SERVER_STARTED.register(LifeBridge::onServerStarted);
 		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register(LifeBridge::onRespawn);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			TerrainManager.reset();
+            WorldMirror.reset();
 			EntityBridge.reset();
 			CombatBridge.reset();
 			FireBridge.reset();
 		});
 		ServerTickEvents.END_SERVER_TICK.register(TerrainManager::onServerTick);
+        ServerTickEvents.END_SERVER_TICK.register(WorldMirror::tick);
 		ServerTickEvents.END_SERVER_TICK.register(EntityBridge::onServerTick);
 		ServerTickEvents.END_SERVER_TICK.register(CombatBridge::onServerTick);
 		ServerTickEvents.END_SERVER_TICK.register(FireBridge::onServerTick);

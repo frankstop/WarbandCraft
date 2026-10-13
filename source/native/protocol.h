@@ -111,6 +111,7 @@ typedef struct WbmcControl {
     float lightMin;               /* 0x50 */
     float fogStrength;            /* 0x54 0 = default */
     float hunterYawDeg;           /* 0x58 hunter facing (Minecraft yaw, degrees) when MOVE_HUNTER */
+    uint32_t epoch; /* native mission generation; extension in the reserved control block */
 } WbmcControl;                    /* 0x5C */
 
 /* Hits taken by the hunter while it stands in for the Minecraft player (MOVE_HUNTER):
@@ -313,7 +314,7 @@ typedef struct WbmcFrameHeader {
 #ifdef __cplusplus
 static_assert(sizeof(WbmcHeader) == 0x50, "header size");
 static_assert(sizeof(WbmcGameState) == 0x100, "state size");
-static_assert(sizeof(WbmcControl) == 0x5C, "control size");
+static_assert(sizeof(WbmcControl) == 0x60, "control size");
 static_assert(sizeof(WbmcHunterEvents) == 0x30, "hunter events size");
 static_assert(sizeof(WbmcCmdBlock) == 0x1000, "cmd size");
 static_assert(sizeof(WbmcRayHeader) == 0x20, "ray header size");

@@ -1,0 +1,36 @@
+GPU: Apple M1 Pro; OpenGL 2.1 Metal - 90.5
+PASS: point light illuminates native-color surface and switching it off removes illumination.
+PASS: unsupported multisampled depth is rejected rather than drawing corrupt pixels.
+PASS: retained full-size world depth survives framebuffer reuse; reduced and missing attachments rejected.
+PASS: collider axis mapping, removed-collider retirement, stale epochs and oversized snapshots.
+PASS: native wall occludes farther block; nearer block visible; GUI stays visible; invalid depth rejected; float textures sample correctly.
+Shader GPU: Apple M1 Pro; OpenGL 4.1 Metal - 90.5
+PASS: Minecraft bridge shader grades world color while preserving translucent alpha and transparent background.
+PASS: checkpoint rollback, inventory/build recovery, displaced-world backups, immutable snapshots, corruption rejection, unknown saves, collider merging preserves gaps and slabs.
+Fixture retained at /var/folders/k0/5j9bhzvd0r5gddmbr7d8q2_80000gn/T/warbandcraft-checkpoint-test3299924971741798804
+Installed WarbandCraft: 50 mission templates, reserved troop 1072; Native untouched
+PASS: all 50 mission templates parse with balanced operations; prop counts and box resource are valid; mailbox regions do not overlap.
+Starting a Gradle Daemon (subsequent builds will be faster)
+Reusing configuration cache.
+> Task :remapSourcesJar SKIPPED
+> Task :validateAccessWidener NO-SOURCE
+> Task :processTestResources NO-SOURCE
+> Task :processClientResources UP-TO-DATE
+> Task :processIncludeJars UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :compileJava UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :compileClientJava UP-TO-DATE
+> Task :clientClasses UP-TO-DATE
+> Task :compileTestJava NO-SOURCE
+> Task :testClasses UP-TO-DATE
+> Task :jar UP-TO-DATE
+> Task :test NO-SOURCE
+> Task :check UP-TO-DATE
+> Task :remapJar UP-TO-DATE
+> Task :assemble UP-TO-DATE
+> Task :build UP-TO-DATE
+
+BUILD SUCCESSFUL in 3s
+7 actionable tasks: 7 up-to-date
+Configuration cache entry reused.

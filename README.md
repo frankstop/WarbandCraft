@@ -1,89 +1,57 @@
-# WarbandCraft
+# WarbandCraft — native Mac integration
 
-**Real Minecraft inside native macOS Mount & Blade: Warband.**
+This build runs real Minecraft Java 1.21.1 with Fabric alongside Steam's native Intel macOS Warband 1.174 under Rosetta. Warband draws Minecraft's world, hand, Steve model, and HUD in its own OpenGL frame. Warband's mission scripts supply real player and agent positions, health, camera control, and scene collision rays.
 
-[![Experimental](https://img.shields.io/badge/status-experimental-orange)](docs/validation.md)
-[![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-green)](docs/installation.md)
-[![MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-
-Warband runs its world, soldiers and battles. Minecraft Java Edition runs alongside it and supplies the player, inventory, crafting, blocks, redstone, TNT and Elytra. A native OpenGL bridge draws Minecraft's captured world, hand and HUD inside Warband's frame.
-
-This is an early, locally tested prototype. Camera alignment, native composition, live soldiers, terrain queries, redstone and TNT have been checked. Combat, Elytra, terrain transitions and scene compatibility need more gameplay testing. **Warband soldiers do not yet collide with Minecraft blocks.** See [validation and known limits](docs/validation.md).
-
-## Start playing
-
-You need your own copies of **Warband** and **Minecraft: Java Edition**. The tested setup is **Apple Silicon macOS**, Steam's native **Warband 1.174** under Rosetta, **Prism Launcher**, **Java 21**, Minecraft **1.21.1**, Fabric Loader **0.19.5** and Fabric API **0.116.17+1.21.1**.
-
-1. Download and extract the [latest prerelease](https://github.com/frankstop/WarbandCraft/releases/tag/v0.1.0), or clone this repository.
-2. Install Prism Launcher and Java 21, and sign into Prism with an account that owns Minecraft Java Edition.
-3. With Warband closed, run **Setup WarbandCraft.command** once. It creates a separate Prism instance and a separate Warband module from your installed Native module. It downloads Fabric API; Prism downloads Minecraft and Fabric Loader.
-4. Double-click **Play WarbandCraft.command**. Leave its Terminal window open while playing.
-5. In Warband, choose **Custom Battle → Start**, or load a campaign and enter a playable 3D scene.
-6. Press **F8** (or **Fn + F8**) to control Steve. Press it again to return to Warband.
-
-**The launcher opens both games. You still select a battle or load a campaign yourself.** Minecraft opens its bridge world automatically. No tutorial skip or automatic Warband menu bypass is installed.
-
-[Detailed installation and troubleshooting](docs/installation.md) · [Development](docs/development.md) · [Architecture](docs/architecture.md) · [Report a bug](https://github.com/frankstop/WarbandCraft/issues/new/choose)
+For the current isolated 0.2.1 patch, double-click **Play WarbandCraft 0.2.1.command** and read [RELEASE_STATUS.md](RELEASE_STATUS.md) for its complete feature/test matrix. The instructions below describe the older prototype started by **Play WarbandCraft.command** inside the Desktop's **WarbandCraft** folder. Steam must be running. The launcher selects the separate **WarbandCraft** module and starts the separate **WarbandCraft** Prism instance. Enter a playable scene, then press **F8** (or Fn+F8 on a Mac keyboard).
 
 ## Controls
 
-| Input | Action |
+| Key | Action |
 |---|---|
-| F8 / Fn + F8 | Switch Steve / Warband control |
-| WASD / mouse / Space / Shift | Move / look / jump / sneak |
-| E | Minecraft inventory |
-| Left / right click | Break or attack / place or use |
-| 1–9 / wheel | Select hotbar slot |
-| F5 | Minecraft first-person / third-person camera |
+| F8 | Switch Steve / Warband input and camera |
+| WASD, mouse, Space, Shift | Minecraft movement, jump, sneak |
+| E | Actual Minecraft inventory |
+| Right / left click | Use or place / attack or break |
+| 1–9 / wheel | Minecraft hotbar |
+| F5 | First-person / Steve third-person cameras |
+| F9 | Bridge status and entity diagnostics |
+| Alt+1 / 2 / 3 / 0 | Infantry / archers / cavalry / everyone |
+| Alt+F1 / F2 / F3 / F4 / F5 | Hold / follow / charge / hold fire / advance |
 | T | Minecraft chat and commands |
-| F9 | Bridge diagnostics |
-| Alt + 1 / 2 / 3 / 0 | Infantry / archers / cavalry / everyone |
-| Alt + F1 / F2 / F3 / F4 / F5 | Hold / follow / charge / hold fire / advance |
 
-The dedicated bridge world starts in Creative. Enter `/gamemode survival` for normal crafting and damage, or `/gamemode creative` for free building. An empty inventory receives a starter kit: blocks, crafting table, redstone, TNT, weapons, an equipped Elytra and rockets. Elytra uses Minecraft's normal flight controls: press Space while falling, then use a rocket.
+The bridge world begins in Creative for testing. For actual survival inventory, crafting and damage, type `/gamemode survival`. Use `/gamemode creative` to return to free building. The starter kit is granted only to an empty inventory. It includes materials, a crafting table, redstone, TNT, flint and steel, weapons, an equipped Elytra, and rockets. For Elytra: jump from a height, press Space again while falling, then use a rocket.
 
-Switching to another application hides Minecraft's input window and releases camera control. Resume in Warband with F8.
+Switching to another application hides Minecraft's input window and releases Warband's camera. It must not cover ChatGPT or the desktop. Press F8 in Warband to resume. Closing Minecraft also releases camera control automatically.
 
-## How it works
+## Human test
 
-A Fabric mod and an Intel macOS loader communicate through local shared-memory files. A dedicated troop's slots form a mailbox for Warband's mission VM. The native bridge validates the mailbox allocation; mission operations run on Warband's game thread. They read agent positions and health, set the camera/avatar, perform collision rays and deliver damage.
+1. Start a custom battle. Switch with F8; check that Warband soldiers keep moving.
+2. Open E, select blocks, place and break several blocks. Walk and jump on them.
+3. Place a crafting table. In Survival, craft planks/sticks from the supplied logs.
+4. Wire a lever to redstone and a lamp. Toggle it. Ignite TNT near placed blocks.
+5. Hit an enemy using the diamond sword or a bow; observe Warband health/defeat. In Survival, verify incoming soldier damage, armor and shields.
+6. Test Elytra and rockets; use F5 to see Steve.
+7. Switch to ChatGPT, then back to Warband. Confirm the overlay hides and F8 resumes.
+8. Test town streets, taverns, villages, arenas, field battles and sieges. All 50 Native mission templates contain the bridge triggers; each scene type still needs acceptance testing.
 
-Minecraft simulates the player and blocks, captures color/depth/HUD and publishes the corresponding camera pose. Warband applies that pose and combines the matching frame with its own OpenGL depth buffer. The bridge checks the rendered camera against the captured pose to avoid composing mismatched frames. A watchdog releases camera control if Minecraft stops responding.
+## Current limits
 
-All 50 installed Native mission templates are instrumented. That is implementation coverage, **not proof that every scene works**.
+- This is a prototype ready for gameplay testing, not a claim of complete scene compatibility.
+- Warband troops currently do **not** collide with Minecraft blocks. Minecraft players do. Warband terrain is represented by sampled invisible Minecraft collision blocks, so small geometry can be coarse.
+- Soldier proxy hitboxes are approximate capsules/boxes, not Warband's skeletal hitboxes. The table holds up to 1,024 live agents.
+- Minecraft builds persist by Warband scene ID. Reused generated battlefield scene IDs can share builds. Campaign-specific and generated-terrain persistence needs further work.
+- Warband's original terrain cannot be mined. Host fire/projectiles do not light Minecraft blocks automatically. Minecraft TNT, crafting, redstone and Elytra use Minecraft's actual simulation.
+- Windowed Warband is the supported mode. Fullscreen, other Warband modules and multiplayer have not been validated.
+- Minecraft keep-inventory and immediate respawn are enabled in this test world; Warband still owns battle defeat and campaign consequences.
 
-## Known limits
+## Files and diagnosis
 
-- Native soldiers pass through Minecraft blocks; host hitboxes are approximate.
-- Host terrain is sampled into invisible Minecraft collision blocks. Narrow passages, slopes and small props can be coarse. Warband terrain cannot be mined.
-- Builds persist by scene ID. Generated battlefields that reuse an ID can share builds.
-- Combat and death forwarding are implemented but need broader end-to-end gameplay validation. Armor, shields, projectiles and mounted play may expose mismatches.
-- Elytra runs Minecraft's simulation; flight feel and fast terrain sampling still need acceptance testing.
-- Windowed play at **1280 × 720** is the supported default. Frame slots support up to 1920 × 1200. Fullscreen, other Warband modules, multiplayer and Intel Macs are unverified.
-- Minecraft keep-inventory and immediate respawn are enabled in the test world. Warband owns battle defeat and campaign consequences.
+Native log: `WarbandCraft/logs/native.log`. Minecraft log/world: Prism's `instances/WarbandCraft/minecraft/` directory. Source and build scripts are included in `source/`. `source/install_module.py` patches a copy of installed Native, preserving Native and existing other modules. `source/build_native.sh` builds the Intel renderer/loader. The loader permits native core updates without restarting the game; Minecraft JAR updates require restarting Minecraft.
 
-## Source layout
+The failed Desktop installation was preserved separately. No Steam game executable was patched, no Minecraft account credentials were copied, and existing Prism worlds were not overwritten.
 
-```text
-source/native/       Native loader, transport, camera and OpenGL compositor
-source/minecraft/    Minecraft 1.21.1 Fabric mod and Gradle wrapper
-source/              Native build and Warband module installer
-bin/                 Intel macOS bridge binaries
-mods/                Built WarbandCraft Fabric mod
-prism/               Account-free Prism instance template
-tools/               Setup and verification helpers
-tests/               Native ABI/transport regression checks
-docs/                Installation, architecture, validation and development
-```
+Upstream inspiration and Minecraft-side source: [minecraft-crossover-bridge](https://github.com/justbustin/minecraft-crossover-bridge), [SkyCraft](https://github.com/chasmlol/SkyCraft), and [Minecraft-Ring](https://github.com/siddoff/Minecraft-Ring). The native Warband mission mailbox, engine operations, OpenGL compositor and loader were implemented here. See the included upstream license.
 
-## Credits
+## Current patch (0.2.1)
 
-- [minecraft-crossover-bridge](https://github.com/justbustin/minecraft-crossover-bridge) by **justbustin** is the Minecraft-side code foundation and shared-memory/frame-transport reference.
-- [SkyCraft](https://github.com/chasmlol/SkyCraft) by **chasmlol** inspired keeping the host game authoritative while drawing real Minecraft inside its frame.
-- [Minecraft-Ring](https://github.com/siddoff/Minecraft-Ring) by **siddoff** inspired the host/Fabric separation, setup documentation and candid feature/limitation presentation.
-- WarbandCraft's native Mac Warband loader, mission mailbox, collision queries and compositor integration were developed for this project.
-- [Fabric](https://fabricmc.net/), [Prism Launcher](https://prismlauncher.org/) and the Warband Module System make the integration possible.
-
-[MIT License](LICENSE) · [Third-party notices](THIRD-PARTY-NOTICES.md)
-
-This is an unofficial fan project, unaffiliated with Mojang, Microsoft or TaleWorlds. Minecraft, Warband, their assets, saved games and account credentials are not distributed.
+**Play WarbandCraft 0.2.1.command** (or **Play WarbandCraft Next.command**) starts the isolated Next instance/module. It fixes the screenshot corruption, native collider multiplier, and campaign-world teardown, and provides a Minecraft app identity for direct Computer Use. See [RELEASE_STATUS.md](RELEASE_STATUS.md) for everything inherited from 0.2.0, actual automated/live test results, evidence, and unresolved shared-world milestones. Paired native saves remain opt-in; navigation and arbitrary native geometry import are not complete. The older normal launcher remains available.

@@ -59,7 +59,8 @@ public class WarbandBridgeClient implements ClientModInitializer {
 			}
 
 
-			WorldBootstrap.tick(mc);
+			NativeSaveCoordinator.tick(mc);
+            WorldBootstrap.tick(mc);
 			DevCommands.tick(mc);
 		});
 
@@ -86,7 +87,7 @@ public class WarbandBridgeClient implements ClientModInitializer {
 		} else {
 			boolean have = link.snapshot(HUD_STATE);
 			line1 = String.format("Warband: live  frame %d  %s  camera %s%s", have ? HUD_STATE.frame : 0,
-				!Overlay.active() ? "overlay off" : FramePassthrough.activeInWarband() ? "drawn inside Warband" : "overlay window", CameraSync.mode(),
+				!Overlay.active() ? "overlay off" : FramePassthrough.activeInWarband() ? "drawn inside Warband" : FramePassthrough.suppressWindowWorld() ? "waiting for native rendering" : "overlay window", CameraSync.mode(),
 				CameraSync.mode() == CameraSync.Mode.DRIVE_Warband && !CameraSync.warbandFollowing() ? " (Warband not following yet)" : "");
 			if (have && HUD_STATE.has(Protocol.STATE_PLAYER_VALID)) {
 				line2 = String.format("avatar %.0f %.0f %.0f", HUD_STATE.playerPos[0], HUD_STATE.playerPos[1], HUD_STATE.playerPos[2]);

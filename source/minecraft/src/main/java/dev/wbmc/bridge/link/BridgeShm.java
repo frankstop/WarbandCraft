@@ -120,6 +120,7 @@ public final class BridgeShm {
 		buf.putInt(base + Protocol.C_POSE_LAG, c.poseLag);
 		buf.putInt(base + Protocol.C_DEPTH_INDEX, c.depthIndex);
 		buf.putFloat(base + Protocol.C_AVATAR_YAW, c.avatarYawDeg);
+        buf.putInt(base + 0x5c, (int)INT.getAcquire(buf,0x40));
 		INT.setRelease(buf, base + Protocol.C_SEQ, s + 2);
 	}
 
@@ -298,6 +299,47 @@ public final class BridgeShm {
 		buf.putInt(offset + 4, buf.getInt(0x40));
 		INT.setRelease(buf, offset, (int) INT.getOpaque(buf, offset) + 1);
 	}
+
+    public BridgeContext context() {
+        int base = 0x2b0000;
+        for (int attempt = 0; attempt < 8; attempt++) {
+            int seq = (int) INT.getAcquire(buf, base);
+            if (seq == 0 || (seq & 1) != 0) continue;
+            if (buf.getInt(base + 4) != 1 || buf.getInt(base + 8) != 2) return null;
+            int epoch = buf.getInt(base + 12), scene = buf.getInt(base + 16), encounter = buf.getInt(base + 20);
+            StringBuilder key = new StringBuilder();
+            boolean valid = true;
+            for (int i = 0; i < 4; i++) {
+                int part = buf.getInt(base + 24 + i * 4);
+                valid &= part > 0;
+                key.append(String.format("%08x", part));
+            }
+            VarHandle.acquireFence();
+            if ((int) INT.getAcquire(buf, base) == seq && valid && epoch == (int) INT.getAcquire(buf, 0x40)) return new BridgeContext(epoch, scene, encounter, key.toString());
+        }
+        return null;
+    }
+
+    public boolean publishGeometry(int epoch, java.util.List<float[]> boxes) {
+        if (boxes.size() > 2048) return false;
+        int base = 0x300000, seq = (int) INT.getOpaque(buf, base);
+        if ((seq & 1) != 0) seq++;
+        INT.setOpaque(buf, base, seq + 1); VarHandle.releaseFence();
+        buf.putInt(base + 4, 1); buf.putInt(base + 8, epoch); buf.putInt(base + 12, boxes.size());
+        for (int i = 0; i < boxes.size(); i++) {
+            float[] box = boxes.get(i);
+            for (int k = 0; k < 6; k++) buf.putFloat(base + 64 + i * 24 + k * 4, box[k]);
+        }
+        INT.setRelease(buf, base, seq + 2); return true;
+    }
+
+    public void publishLights(int epoch, java.util.List<float[]> lights) {
+        int base=0x320000,seq=(int)INT.getOpaque(buf,base);if((seq&1)!=0)seq++;
+        INT.setOpaque(buf,base,seq+1);VarHandle.releaseFence();
+        buf.putInt(base+4,1);buf.putInt(base+8,epoch);buf.putInt(base+12,Math.min(32,lights.size()));
+        for(int i=0;i<Math.min(32,lights.size());i++)for(int k=0;k<8;k++)buf.putFloat(base+64+i*32+k*4,lights.get(i)[k]);
+        INT.setRelease(buf,base,seq+2);
+    }
 
 	private void putFloats(int off, float[] v) {
 		for (int i = 0; i < v.length; i++) {

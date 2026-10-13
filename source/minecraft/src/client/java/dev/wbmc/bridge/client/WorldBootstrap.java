@@ -38,11 +38,30 @@ public final class WorldBootstrap {
 	}
 
 	private static final Logger LOG = LoggerFactory.getLogger("warbandcraft");
-	private static final String LEVEL_ID = "warband-bridge";
+	private static String levelId;
+    private static String campaign;
 	private static boolean attempted;
 
 	/** Client tick: as soon as Warband is running while the title screen is up, enter the bridge world. */
-	public static void tick(Minecraft mc) {
+	private static int awaitingEpoch=-1;
+    public static void reopen(int previousEpoch){attempted=false;campaign=null;awaitingEpoch=previousEpoch;}
+
+    public static void tick(Minecraft mc) {
+        if(NativeSaveCoordinator.busy())return;
+        var activeContext = WarbandLink.get().context();
+        if(awaitingEpoch!=-1){if(activeContext==null||activeContext.epoch()==awaitingEpoch)return;awaitingEpoch=-1;}
+        if (campaign != null && activeContext != null && !campaign.equals(activeContext.campaign()) && mc.level != null) {
+            // Close the local connection first, as Minecraft's Save and Quit does.
+            // Client teardown alone waits forever for an integrated server that is still running.
+            campaign = null;
+            mc.level.disconnect();
+            mc.disconnect();
+            mc.setScreen(new TitleScreen());
+            attempted = false;
+            return;
+        }
+        if (mc.screen instanceof TitleScreen && mc.level == null && campaign != null && activeContext != null
+            && !campaign.equals(activeContext.campaign())) attempted = false;
 		boolean onMenu = mc.screen instanceof TitleScreen || mc.screen instanceof AccessibilityOnboardingScreen;
 		if (attempted || Boolean.getBoolean("warbandcraft.noAutoWorld") || !onMenu) {
 			return;
@@ -50,15 +69,19 @@ public final class WorldBootstrap {
 		if (!WarbandLink.get().alive()) {
 			return;
 		}
+        var context = WarbandLink.get().context();
+        if (context == null) return;
+        campaign = context.campaign();
+        levelId = context.worldId();
 		attempted = true;
 		if (mc.options.onboardAccessibility) {
 			mc.options.onboardAccessibility = false;
 			mc.options.save();
 		}
 		mc.execute(() -> {
-			if (mc.getLevelSource().levelExists(LEVEL_ID)) {
+			if (mc.getLevelSource().levelExists(levelId)) {
 				LOG.info("Opening bridge world");
-				mc.createWorldOpenFlows().openWorld(LEVEL_ID, () -> mc.setScreen(new TitleScreen()));
+				mc.createWorldOpenFlows().openWorld(levelId, () -> mc.setScreen(new TitleScreen()));
 			} else {
 				LOG.info("Creating bridge world");
 				create(mc);
@@ -71,10 +94,10 @@ public final class WorldBootstrap {
 		rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
 		rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
 		rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
-		LevelSettings settings = new LevelSettings(TerrainManager.BRIDGE_LEVEL_NAME, GameType.CREATIVE, false,
+		LevelSettings settings = new LevelSettings(TerrainManager.BRIDGE_LEVEL_NAME + " " + campaign, GameType.CREATIVE, false,
 			Difficulty.NORMAL, true, rules, WorldDataConfiguration.DEFAULT);
 		WorldOptions options = new WorldOptions(0L, false, false);
-		mc.createWorldOpenFlows().createFreshLevel(LEVEL_ID, settings, options, registries -> {
+		mc.createWorldOpenFlows().createFreshLevel(levelId, settings, options, registries -> {
 			HolderGetter<Biome> biomes = registries.lookupOrThrow(Registries.BIOME);
 			HolderSet<StructureSet> noStructures = HolderSet.direct();
 			FlatLevelGeneratorSettings flat = new FlatLevelGeneratorSettings(Optional.of(noStructures), biomes.getOrThrow(Biomes.THE_VOID), List.of());

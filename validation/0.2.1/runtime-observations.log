@@ -1,0 +1,22 @@
+[01:58:41] [Render thread/INFO]: [devcmd] status: no player
+[01:58:42] [Render thread/INFO]: Creating bridge world
+[02:01:59] [Server thread/INFO]: Stopping server
+[02:01:59] [Server thread/INFO]: Saving players
+[02:01:59] [Server thread/INFO]: Saving worlds
+[02:01:59] [Render thread/INFO]: Opening bridge world
+[02:02:35] [Render thread/INFO]: Control -> Minecraft
+[02:02:55] [Render thread/INFO]: [devcmd] status: player (40962.0, 100.0, 0.5) yaw 90.0 pitch 0.0 onGround true flying false cam (40962.0, 101.61999988555908, 0.5) camType FIRST_PERSON overlay true target miss anchor Mapping[ax=0.012000000104308128, ay=-0.9440000653266907, az=-14.25200080871582, unitsPerMeter=1.0, flipZ=true, provisional=false, zone=95, region=5]
+[02:04:31] [Render thread/INFO]: [devcmd] ok: ray 40958 120.5 0.5 40963 120.5 0.5
+[02:05:44] [Render thread/INFO]: [devcmd] ok: ray 40958 120.5 0.5 40963 120.5 0.5
+[03:11:28] [Render thread/INFO]: Control -> Warband
+[03:12:36] [Render thread/INFO]: Control -> Minecraft
+[03:12:40] [Render thread/INFO]: Control -> Warband
+[03:12:42] [Render thread/INFO]: Control -> Minecraft
+[03:18:24] [Render thread/INFO]: [devcmd] status: player (40964.5, 100.0, 0.5) yaw 90.0 pitch 0.0 onGround true flying false cam (40964.5, 101.61999988555908, 0.5) camType FIRST_PERSON overlay true target block class_2339{x=40964, y=101, z=0} Block{warbandcraft:terrain}[height=16] anchor Mapping[ax=0.012000000104308128, ay=-0.9440000653266907, az=-14.25200080871582, unitsPerMeter=1.0, flipZ=true, provisional=false, zone=95, region=5]
+[08:37:56] [Render thread/INFO]: Control -> Warband
+[08:38:35] [Render thread/INFO]: Control -> Minecraft
+[08:39:40] [Render thread/INFO]: Control -> Warband
+[08:40:52] [Render thread/INFO]: Control -> Minecraft
+[08:41:47] [Render thread/INFO]: [devcmd] ok: shader off
+[08:42:14] [Render thread/INFO]: [devcmd] status: player (32770.0, 99.0, 0.5) yaw 90.0 pitch 0.0 onGround true flying false cam (32770.0, 100.61999988555908, 0.5) camType FIRST_PERSON overlay true target block class_2339{x=32769, y=100, z=0} Block{warbandcraft:terrain}[height=16] anchor Mapping[ax=3.76200008392334, ay=0.005000000353902578, az=-0.6610000133514404, unitsPerMeter=1.0, flipZ=true, provisional=false, zone=117, region=4]
+[08:44:20] [Render thread/INFO]: [devcmd] ok: shader on

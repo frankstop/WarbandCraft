@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 #define INTERPOSE(repl,orig) __attribute__((used)) static struct {const void *a,*b;} ip_##orig __attribute__((section("__DATA,__interpose")))={(void*)&repl,(void*)&orig};
 static void *core;
-static void (*tick)(SDL_Window*),(*shutdown_core)(void);
+static void (*tick)(SDL_Window*),(*shutdown_core)(void),(*prepare_save_core)(void);
 static int (*event_core)(SDL_Event*);
 static struct timespec modified;
 static unsigned int checks,generation;
@@ -22,10 +23,12 @@ static void reload(void){
  void(*next_tick)(SDL_Window*)=dlsym(next,"bridge_swap");int(*next_event)(SDL_Event*)=dlsym(next,"bridge_event");
  if(!next_tick||!next_event){dlclose(next);return;}
  if(shutdown_core)shutdown_core();if(core)dlclose(core);
- core=next;tick=next_tick;event_core=next_event;shutdown_core=dlsym(core,"bridge_shutdown");modified=st.st_mtimespec;
+ core=next;tick=next_tick;event_core=next_event;shutdown_core=dlsym(core,"bridge_shutdown");prepare_save_core=dlsym(core,"bridge_prepare_save");modified=st.st_mtimespec;
  fprintf(stderr,"[WBMC] Loaded native core generation %u\n",generation);
 }
 static void swap(SDL_Window*w){if(!core||++checks%60==0)reload();if(tick)tick(w);SDL_GL_SwapWindow(w);}
 static int poll(SDL_Event*e){int r;while((r=SDL_PollEvent(e)) && event_core && !event_core(e)){}return r;}
 INTERPOSE(swap,SDL_GL_SwapWindow)
 INTERPOSE(poll,SDL_PollEvent)
+
+#include "save_hooks.inc"

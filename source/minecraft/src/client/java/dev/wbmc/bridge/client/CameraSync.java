@@ -141,6 +141,11 @@ public final class CameraSync {
 			driving = false;
 			return;
 		}
+        var mission = WarbandLink.get().context();
+        if(mission!=null && dev.wbmc.bridge.TerrainManager.activeEpoch!=mission.epoch()) {
+            driving=false; releaseWarbandCamera(); return;
+        }
+
 		driving = mode == Mode.DRIVE_Warband;
 
 		if (mode == Mode.FOLLOW_Warband) {

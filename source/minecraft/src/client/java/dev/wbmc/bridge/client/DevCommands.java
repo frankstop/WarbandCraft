@@ -35,7 +35,27 @@ public final class DevCommands {
 	private static final Logger LOG = LoggerFactory.getLogger("warbandcraft");
 	private static final Path FILE = Path.of("/tmp/warbandcraft/mc_cmd.txt");
 
+    private static float[] diagnosticRay;
+    private static int diagnosticSeq=-1;
+    private static long diagnosticStarted;
+    private static void pollDiagnosticRay(){
+        if(diagnosticRay==null)return;
+        var link=dev.wbmc.bridge.link.WarbandLink.get();
+        try {
+            if(System.currentTimeMillis()-diagnosticStarted>5000)throw new IllegalStateException("Native ray timeout");
+            if(diagnosticSeq<0){diagnosticSeq=link.submitRays(diagnosticRay,1,0,null);return;}
+            if(!link.raysDone(diagnosticSeq))return;
+            float[] result=new float[6];int[] hit=new int[1],attr=new int[1];link.readHits(1,result,hit,attr);
+            Files.writeString(Path.of("/tmp/warbandcraft/ray-result.json"),new com.google.gson.Gson().toJson(
+                java.util.Map.of("hit",hit[0],"attribute",attr[0],"nativePosition",new float[]{result[0],result[1],result[2]})));
+            diagnosticRay=null;dev.wbmc.bridge.TerrainManager.setDiagnosticRays(false);
+        }catch(Exception e){
+            LOG.warn("Diagnostic ray failed",e);diagnosticRay=null;dev.wbmc.bridge.TerrainManager.setDiagnosticRays(false);
+        }
+    }
+
 	public static void tick(Minecraft mc) {
+        pollDiagnosticRay();
 		if (!Files.exists(FILE)) {
 			return;
 		}
@@ -62,6 +82,16 @@ public final class DevCommands {
 		String[] a = line.split("\\s+", 2);
 		String arg = a.length > 1 ? a[1] : "";
 		switch (a[0]) {
+            case "ray" -> {
+                String[] v=arg.split("\\s+");if(v.length!=6)throw new IllegalArgumentException("ray x0 y0 z0 x1 y1 z1 (Minecraft coordinates)");
+                var map=CoordMap.get();if(map==null)throw new IllegalStateException("No coordinate mapping");
+                diagnosticRay=new float[6];diagnosticSeq=-1;diagnosticStarted=System.currentTimeMillis();
+                for(int i=0;i<2;i++){
+                    double[] p=map.toWarband(Double.parseDouble(v[i*3]),Double.parseDouble(v[i*3+1]),Double.parseDouble(v[i*3+2]));
+                    for(int k=0;k<3;k++)diagnosticRay[i*3+k]=(float)p[k];
+                }
+                dev.wbmc.bridge.TerrainManager.setDiagnosticRays(true);
+            }
 			case "cam" -> mc.options.setCameraType(switch (arg) {
 				case "third" -> CameraType.THIRD_PERSON_BACK;
 				case "front" -> CameraType.THIRD_PERSON_FRONT;
@@ -84,6 +114,7 @@ public final class DevCommands {
 			case "screenshot" -> Screenshot.grab(mc.gameDirectory, (arg.isEmpty() ? "devcmd" : arg) + ".png",
 				mc.getMainRenderTarget(), msg -> LOG.info("[devcmd] {}", msg.getString()));
 			case "status" -> status(mc);
+            case "shader" -> BridgeShader.enabled = !arg.equals("off");
 			case "probe" -> {
 				var server = mc.getSingleplayerServer();
 				if (server != null) server.execute(() -> {

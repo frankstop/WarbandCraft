@@ -3,7 +3,7 @@
   "id": "warbandcraft",
   "version": "${version}",
   "name": "WarbandCraft (experimental)",
-  "description": "Experimental real Minecraft bridge for native macOS Mount & Blade: Warband. Requires the included native host and WarbandCraft module.",
+  "description": "Experimental Minecraft Java bridge for Mount & Blade: Warband. Requires the WSE2 host adapter.",
   "authors": [
     "WarbandCraft contributors",
     "justbustin (upstream bridge)"
@@ -30,10 +30,5 @@
     "minecraft": "~1.21.1",
     "java": ">=21",
     "fabric-api": "*"
-  },
-  "contact": {
-    "homepage": "https://github.com/frankstop/WarbandCraft",
-    "sources": "https://github.com/frankstop/WarbandCraft",
-    "issues": "https://github.com/frankstop/WarbandCraft/issues"
   }
 }

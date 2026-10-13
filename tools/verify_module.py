@@ -43,16 +43,16 @@ def main():
     native = Path(sys.argv[1]).expanduser().resolve()
     with tempfile.TemporaryDirectory(prefix='warbandcraft-module-') as temp:
         root = Path(temp); fixture = root / 'Native'; fixture.mkdir()
-        for name in ['mission_templates.txt', 'troops.txt']:
+        for name in ['mission_templates.txt', 'troops.txt', 'scene_props.txt', 'scenes.txt', 'module.ini']:
             shutil.copy2(native / name, fixture / name)
         before = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in fixture.iterdir()}
         subprocess.run([sys.executable, str(ROOT / 'source/install_module.py'), str(root)], check=True)
         patched = root / 'WarbandCraft'
         validate(patched / 'mission_templates.txt')
         assert int((patched / 'troops.txt').read_text().splitlines()[1]) == int((fixture / 'troops.txt').read_text().splitlines()[1]) + 1
-        first = {p.name: p.read_bytes() for p in patched.iterdir()}
+        first = {str(p.relative_to(patched)): p.read_bytes() for p in patched.rglob('*') if p.is_file()}
         subprocess.run([sys.executable, str(ROOT / 'source/install_module.py'), str(root)], check=True)
-        assert first == {p.name: p.read_bytes() for p in patched.iterdir()}, 'Installer not idempotent'
+        assert first == {str(p.relative_to(patched)): p.read_bytes() for p in patched.rglob('*') if p.is_file()}, 'Installer not idempotent'
         assert before == {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in fixture.iterdir()}, 'Native changed'
     print('PASS: 50 missions, balanced operations, troop count, idempotency and Native preservation')
 

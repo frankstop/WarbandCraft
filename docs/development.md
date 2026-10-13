@@ -1,5 +1,7 @@
 # Development
 
+The current source targets 0.2.1. The default native output is `validation/candidate/bin/`; the isolated launcher is **Play WarbandCraft 0.2.1.command**. Historical binaries under `bin/` and `mods/` support the older launcher.
+
 ## Build the Fabric mod
 
 Use Java 21:
@@ -10,7 +12,7 @@ cd source/minecraft
 ./gradlew build
 ```
 
-The result is `source/minecraft/build/libs/warbandcraft-0.1.0.jar`. Copy it into `mods/` for packaging or into the dedicated Prism instance's `minecraft/mods/` for testing. Stop Minecraft before replacing a JAR. Do not copy a developer's worlds, account database or Prism caches into a release.
+The result is `source/minecraft/build/libs/warbandcraft-0.2.1.jar`. Copy it into `mods/` for packaging or into the dedicated Prism instance's `minecraft/mods/` for testing. Stop Minecraft before replacing a JAR. Do not copy a developer's worlds, account database or Prism caches into a release.
 
 ## Build the native host
 
@@ -28,6 +30,7 @@ Both libraries are Intel x86_64 because native macOS Warband is Intel, even when
 
 ```bash
 bash tools/verify.sh
+bash source/tests/run_all.sh
 python3 tools/verify_module.py \
   "$HOME/Library/Application Support/Steam/steamapps/common/MountBlade Warband/Modules/Native"
 ```
@@ -45,6 +48,8 @@ Native log: `logs/native.log`. Prism log: `instances/WarbandCraft/minecraft/logs
 The development helper can read commands from `/tmp/warbandcraft/mc_cmd.txt` and exports a read-only server probe to `/tmp/warbandcraft/probe.json`. `probe`, `status`, `save`, `blocks x y z r` and `run <Minecraft server command>` support diagnostics. It is a development facility for the dedicated local test world, not a network API.
 
 ## Packaging
+
+The current downloadable patch is `releases/WarbandCraft-0.2.1-patch.zip`, with the file manifest at `releases/0.2.1-manifest.json`. Keep its layout intact: the Next launcher needs the candidate play script, candidate native libraries and built 0.2.1 mod. The historical archive example below describes the 0.1.0 portable package.
 
 Keep release files limited to repository-owned source, scripts, docs, the WarbandCraft JAR and its two native dylibs. Generate an archive from tracked files:
 

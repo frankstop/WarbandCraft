@@ -90,6 +90,12 @@ public final class FramePassthrough {
 		return enabled && Overlay.active() && CameraSync.mode() == CameraSync.Mode.DRIVE_Warband && CameraSync.warbandCompositing();
 	}
 
+    /** Never display an unoccluded window layer when native depth is unavailable. */
+    public static boolean suppressWindowWorld() {
+        return enabled && Overlay.active()
+            && !Boolean.getBoolean("warbandcraft.allowWindowFallback");
+    }
+
 	/** Whether frames are being captured (then CameraSync leaves pose publishing to us). */
 	public static boolean wanted() {
 		return enabled && !failed && Overlay.active() && CameraSync.mode() == CameraSync.Mode.DRIVE_Warband && CameraSync.driving()
@@ -106,7 +112,7 @@ public final class FramePassthrough {
 		boolean fits = main.width <= MAX_W && main.height <= MAX_H;
 		if (!fits && !tooBigLogged) {
 			tooBigLogged = true;
-			LOG.warn("Frame {}x{} is larger than {}x{}; showing Minecraft in its own window instead of inside Warband",
+			LOG.warn("Frame {}x{} is larger than {}x{}; world layer hidden until the render size fits the bridge",
 				main.width, main.height, MAX_W, MAX_H);
 		}
 		return fits;
@@ -176,9 +182,10 @@ public final class FramePassthrough {
 		RenderTarget main = mc.getMainRenderTarget();
 		ensurePbos(main.width, main.height);
 		cur = (int) (frameCounter & 1);
-		GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, main.frameBufferId);
+		GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, BridgeShader.render(main));
 		GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, 4);
 		readInto(PBO[cur][0], GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV);
+        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, main.frameBufferId);
 		readInto(PBO[cur][1], GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT);
 		GL15.glBindBuffer(GL21.GL_PIXEL_PACK_BUFFER, 0);
 		// Hand, screen effects and HUD go onto a transparent layer drawn over everything.
@@ -187,8 +194,11 @@ public final class FramePassthrough {
 		GlStateManager._clearColor(0, 0, 0, 0);
 		GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT, Minecraft.ON_OSX);
 		CameraSync.copyCurrentPose(POSE[cur]);
-		CLIP[cur][0] = 0.05F;
-		CLIP[cur][1] = mc.gameRenderer.getDepthFar();
+		// Capture the clip planes belonging to these pixels, including custom projections.
+		var projection = com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix();
+		float a = projection.m22(), b = projection.m32();
+		CLIP[cur][0] = Math.abs(b / (a - 1.0F));
+		CLIP[cur][1] = Math.abs(b / (a + 1.0F));
 		worldCaptured = true;
 	}
 
@@ -232,6 +242,11 @@ public final class FramePassthrough {
 		for (int i = 0; i < 3; i++) {
 			GL15.glBindBuffer(GL21.GL_PIXEL_PACK_BUFFER, PBO[set][i]);
 			ByteBuffer src = GL30.glMapBufferRange(GL21.GL_PIXEL_PACK_BUFFER, 0, layer, GL30.GL_MAP_READ_BIT);
+			if (src == null) {
+				GL15.glBindBuffer(GL21.GL_PIXEL_PACK_BUFFER, 0);
+				LOG.warn("Frame {} readback failed; leaving slot unpublished", frameId);
+				return;
+			}
 			if (src != null) {
 				ByteBuffer dst = frames.duplicate().order(ByteOrder.LITTLE_ENDIAN);
 				dst.position((int) (base + HDR + layer * i));

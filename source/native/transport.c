@@ -70,6 +70,7 @@ void wb_new_mission(WbTransport *t){
  WbmcHunterEvents *e=AT(t,WBMC_OFF_HUNTER,WbmcHunterEvents);uint32_t n=begin(&e->seq);
  memset((char *)e+4,0,sizeof(*e)-4);end(&e->seq,n);
  wb_entities(t,NULL,0);
+ WbmcRayHeader *r=AT(t,WBMC_OFF_RAYS,WbmcRayHeader);store32(&r->respSeq,load32(&r->reqSeq));
 }
 void wb_publish(WbTransport *t,WbmcGameState *s){
  WbmcGameState *d=AT(t,WBMC_OFF_STATE,WbmcGameState);uint32_t n=begin(&d->seq);

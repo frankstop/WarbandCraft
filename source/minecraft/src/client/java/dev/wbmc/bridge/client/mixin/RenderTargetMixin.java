@@ -41,7 +41,7 @@ public abstract class RenderTargetMixin {
 		GlStateManager._colorMask(true, true, true, true);
 		GlStateManager._clearColor(0.0F, 0.0F, 0.0F, Overlay.active() ? 0.0F : 1.0F);
 		GlStateManager._clear(GL_COLOR_BUFFER_BIT, Minecraft.ON_OSX);
-		if (FramePassthrough.activeInWarband()) {
+		if (FramePassthrough.activeInWarband() || FramePassthrough.suppressWindowWorld()) {
 			// Warband is showing this frame inside its own; our window only keeps the input focus.
 			ci.cancel();
 		}
