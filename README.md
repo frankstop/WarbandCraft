@@ -1,4 +1,4 @@
-# WarbandCraft — native Mac integration
+# WarbandCraft — A Failed Mac integration
 
 This build runs real Minecraft Java 1.21.1 with Fabric alongside Steam's native Intel macOS Warband 1.174 under Rosetta. Warband draws Minecraft's world, hand, Steve model, and HUD in its own OpenGL frame. Warband's mission scripts supply real player and agent positions, health, camera control, and scene collision rays.
 
